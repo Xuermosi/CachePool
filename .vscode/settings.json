@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "optional": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "ratio": "cpp",
+        "system_error": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "*.tcc": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp"
+    },
+    "marscode.enableCodelens": {
+        "enableInlineDocumentation": false,
+        "enableInlineUnitTest": false,
+        "enableInlineExplain": true
+    },
+    "marscode.codeCompletionPro": {
+        "enableCodeCompletionPro": true
+    },
+    "marscode.chatLanguage": "cn"
+}
