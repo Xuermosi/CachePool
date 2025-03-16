@@ -30,10 +30,11 @@
     "marscode.enableCodelens": {
         "enableInlineDocumentation": false,
         "enableInlineUnitTest": false,
-        "enableInlineExplain": true
+        "enableInlineExplain": false
     },
     "marscode.codeCompletionPro": {
-        "enableCodeCompletionPro": true
+        "enableCodeCompletionPro": false
     },
-    "marscode.chatLanguage": "cn"
+    "marscode.chatLanguage": "auto",
+    "marscode.enableInlineCommand": false
 }
