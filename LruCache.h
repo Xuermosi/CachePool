@@ -298,6 +298,10 @@ public:
         Value value;
         // 将 value 对象的内存内容置为0
         memset(&value, 0, sizeof(value));
+        /* 由于在第一个get方法返回的是bool值，但
+         * 通过引用参数，它能够修改并传递value的值，
+         * 使得第二个get方法能够获取到正确的value并返回
+         */
         get(key, value);
         return value;
     }
