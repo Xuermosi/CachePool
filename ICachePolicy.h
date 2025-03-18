@@ -1,6 +1,6 @@
 #pragma once
 
-namespace JazhCache
+namespace XrmsCache
 {
 template<typename Key, typename Value>
 class ICachePolicy

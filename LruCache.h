@@ -9,7 +9,7 @@
 #include "ICachePolicy.h"
 
 // LRU-最近最少使用算法
-namespace JazhCache
+namespace XrmsCache
 {
     // 前向声明，为了在类定义之前引用这个类
 template<typename Key, typename Value> class LruCache;

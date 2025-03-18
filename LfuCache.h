@@ -15,15 +15,14 @@
 namespace XrmsCache
 {
 // 最近最少使用算法
-template<typename Key, typename Value>
-class LfuCache;
+template<typename Key, typename Value> class LfuCache;
 
 // 用于记录节点访问次数的链表
-template<typename Key, typename Value>
 /*
  * FreqList类
  * 是一个辅助类，用于管理具有相同访问频率的节点列表。
  */
+template<typename Key, typename Value>
 class FreqList
 {
 private:
@@ -33,8 +32,8 @@ private:
         int freq; // 访问频次
         Key key;
         Value value;
-        std::shared_ptr<Node> pre;
-        std::shared_ptr<Node> next;
+        std::shared_ptr<Node> pre; // 上一节点
+        std::shared_ptr<Node> next;// 下一节点
 
         // 无参构造
         Node()
@@ -260,5 +259,160 @@ void LfuCache<Key, Value>::removeFromFreqList(NodePtr node)
     auto freq = node->freq;
     // 根据访问频次找到freqList此map中的node并调用node成员方法remove
     freqToFreqList_[freq]->removeNode(node);
+}
+
+// 将节点加入相应的频次链表
+template<typename Key, typename Value>
+void LfuCache<Key, Value>::addToFreqList(NodePtr node)
+{
+    // 检查节点是否为空
+    if (!node)
+        return;
+
+    // 添加进入相应的频次链表之前需要先判断该频次链表是否存在
+    auto freq = node->freq;
+    if (freqToFreqList_.find(node->freq) == freqToFreqList_.end())
+    {
+        // 不存在，自行创建
+        freqToFreqList_[node->freq] = new FreqList<Key, Value>(node->freq);
+    }
+    freqToFreqList_[freq]->addNode(node);
+}
+
+
+// 增加平均访问频次
+template<typename Key, typename Value>
+void LfuCache<Key, Value>::addFreqNum()
+{
+    curTotalNum_++;
+    if (nodeMap_.empty())  // 若缓存中无节点 则把当前平均访问频次置为0
+        curAverageNum_ = 0;
+    else // 当前平均访问频次 = 当前总访问频次 / 缓存中的节点个数
+        curAverageNum_ = curTotalNum_ / nodeMap_.size();
+    
+    if (curAverageNum_ > maxAverageNum) // 更新后的平均访问频次超过限制
+    {
+        // 对访问频次列表进行刷新
+        handleOverMaxAverageNum();
+    }
+}
+
+// 减少平均访问频次和总访问频次(节点被淘汰时更新频次)
+template<typename Key, typename Value>
+void LfuCache<Key, Value>::decreaseFreqNum(int num)
+{
+    // 减少平均访问频次和总访问频次
+    curTotalNum_ -= num;
+    if (nodeMap_.empty())  // 若缓存中无节点 则把当前平均访问频次置为0
+        curAverageNum_ = 0;
+    else // 当前平均访问频次 = 当前总访问频次 / 缓存中的节点个数
+        curAverageNum_ = curTotalNum_ / nodeMap_.size();
+}
+
+// 超过最大平均访问频次时进行处理
+template<typename Key, typename Value>
+void LfuCache<Key, Value>::handleOverMaxAverageNum()
+{
+    if (nodeMap_.empty())
+        return;
+
+    // 当前平均访问频次已经超过了最大平均访问频次，所有节点的访问频次-(maxAverageNum_ / 2)
+    for (auto it = nodeMap_.begin(); it != nodeMap_.end(); ++it)
+    {
+        // 检查节点是否为空
+        if (!it->second) // second是节点指针
+            continue;
+
+        NodePtr node = it->second;
+
+        // 先从当前频率列表中移除
+        removeFromFreqList(node);
+
+        // 减少频率
+        node->freq -= maxAverageNum_ / 2;
+        if (node->freq < 1) node->freq = 1;
+
+        // 添加到新的频率列表
+        addToFreqList(node);
+    }
+
+    // 更新最小频率
+    updateMinFreq();
+}
+
+// 更新最小访问频次
+template<typename Key, typename Value>
+void LfuCache<Key, Value>::updateMinFreq()
+{
+    minFreq_ = INT8_MAX;
+    // 遍历访问频次列表
+    for (const auto& pair : freqToFreqList_)
+    {
+        // 当对应的访问频次列表不为空的时候才进行更新
+        if (pair.second && !pair.second->empty())
+        {
+            minFreq_ = std::min(minFreq_, pair.first);
+        }
+    }
+    if (minFreq_ == INT8_MAX)
+        minFreq_ = 1;
+}
+
+// 缓存数据分散到N个LfuCache上，查询时也按照相同的哈希算法，先获取数据可能存在的分片，
+// 然后再去对应的分片上查询数据。这样可以增加lfu的读写操作的并行度，减少同步等待的耗时。
+// HashLfuCache 的实现类似HashLruCache
+template<typename Key, typename Value>
+void HashLfuCache
+{
+public:
+    HashLfuCache(size_t capacity, int sliceNum, int maxAverageNum = 10)
+    // 若传入值为0，则初始化为当前系统的硬件并发线程数，通过hardware_concurrecy获取
+        : sliceNum_(sliceNum > 0 ? sliceNum : std::thread::hardware_concurrency())
+        , capacity_(capacity)
+    {
+        // 每个切片的大小为容量除以切片数
+        size_t sliceSize = std::ceil(capacity_ / static_cast<double>(sliceNum_)); 
+        for (int i = 0; i < sliceNum_; ++i)
+        {
+            // 加强版pushback 也就是在把obj加入vec之前才new这个obj
+            lfuSliceCaches_.emplace_back(new LfuCache<Key, Value>(sliceSize, maxAverageNum));
+        }
+    }
+
+    void put(Key key, Value value)
+    {
+        // 根据key找出对应的lfu分片
+        size_t sliceIndex = Hash(key) % sliceNum_;
+        return lfuSliceCaches_[sliceIndex]->put(key, value);
+    }
+
+    Value get(Key key)
+    {
+        Value value;
+        get(key, value);
+        return value;
+    }
+
+    // 清除缓存
+    void purge()
+    {
+        for (auto& lfuSliceCache : lfuSliceCaches_)
+        {
+            lfuSliceCache->purge();
+        }
+    }
+
+private:
+    // 由key计算出哈希值
+    size_t Hash(Key key)
+    {
+        std::hash<Key> hashFunc;
+        return hashFunc(key);
+    }
+
+private:
+    size_t capacity_;   // 缓存的总容量
+    int sliceNum_;      // 缓存分片数量
+    std::vector<std::unique_ptr<LfuCache<Key, Value>>> lfuSliceCaches_; // 缓存分片容器
 }
 }

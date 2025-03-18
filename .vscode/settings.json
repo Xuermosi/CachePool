@@ -69,5 +69,8 @@
         "enableCodeCompletionPro": false
     },
     "marscode.chatLanguage": "auto",
-    "marscode.enableInlineCommand": false
+    "marscode.enableInlineCommand": false,
+    "cmake.sourceDirectory": "/data/jazh/CachePool/ArcCache"
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+
 }
