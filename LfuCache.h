@@ -32,15 +32,15 @@ private:
         int freq; // 访问频次
         Key key;
         Value value;
-        std::shared_ptr<Node> pre; // 上一节点
+        std::shared_ptr<Node> prev; // 上一节点
         std::shared_ptr<Node> next;// 下一节点
 
         // 无参构造
         Node()
-        : freq(1), pre(nullptr), next(nullptr) {}
+        : freq(1), prev(nullptr), next(nullptr) {}
         // 实参构造
         Node(Key key, Value value)
-        : freq(1), key(key), value(value), pre(nullptr), next(nullptr) {}
+        : freq(1), key(key), value(value), prev(nullptr), next(nullptr) {}
     };
 
     using NodePtr = std::shared_ptr<Node>;
@@ -50,7 +50,7 @@ private:
 
 public:
     explicit FreqList(int n)
-        : freq_(n);
+        : freq_(n)
     {
         head_ = std::make_shared<Node>();
         tail_ = std::make_shared<Node>();
@@ -61,7 +61,7 @@ public:
     // 判空
     bool isEmpty() const
     {
-        return head->next == tail_;
+        return head_->next == tail_;
     }
 
     // 加入访问链表
@@ -75,7 +75,7 @@ public:
         // 尾插法
         node->prev = tail_->prev;
         node->next = tail_;
-        tail->prev->next = node;
+        tail_->prev->next = node;
         tail_->prev = node;
     }
 
@@ -87,7 +87,7 @@ void removeNode(NodePtr node)
         return;
     }
     // 只有当前节点的时候不删除
-    if (!node->pre || !node->next) 
+    if (!node->prev || !node->next) 
     {
         return;
     }
@@ -99,7 +99,7 @@ void removeNode(NodePtr node)
     node->next = nullptr;
 }
     // 取链表中的第一个有效节点
-    NodePtr getFirstNode() const {return head->next;}
+    NodePtr getFirstNode() const {return head_->next;}
 
     // 
     friend class LfuCache<Key, Value>;
@@ -143,7 +143,7 @@ public:
     }
 
     // value值为传出参数
-    bool get(Key key, Value value)
+    bool get(Key key, Value &value) override
     {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = nodeMap_.find(key);
@@ -172,7 +172,7 @@ public:
 
 private:
     void putInternal(Key key, Value value);     // 添加缓存
-    void getInternal(Key key, Value value);     // 获取缓存
+    void getInternal(NodePtr node, Value& value);     // 获取缓存
 
     void kickOut();     //移除缓存中的过期数据
 
@@ -290,7 +290,7 @@ void LfuCache<Key, Value>::addFreqNum()
     else // 当前平均访问频次 = 当前总访问频次 / 缓存中的节点个数
         curAverageNum_ = curTotalNum_ / nodeMap_.size();
     
-    if (curAverageNum_ > maxAverageNum) // 更新后的平均访问频次超过限制
+    if (curAverageNum_ > maxAverageNum_) // 更新后的平均访问频次超过限制
     {
         // 对访问频次列表进行刷新
         handleOverMaxAverageNum();
@@ -349,7 +349,7 @@ void LfuCache<Key, Value>::updateMinFreq()
     for (const auto& pair : freqToFreqList_)
     {
         // 当对应的访问频次列表不为空的时候才进行更新
-        if (pair.second && !pair.second->empty())
+        if (pair.second && !pair.second->isEmpty())
         {
             minFreq_ = std::min(minFreq_, pair.first);
         }
@@ -362,7 +362,7 @@ void LfuCache<Key, Value>::updateMinFreq()
 // 然后再去对应的分片上查询数据。这样可以增加lfu的读写操作的并行度，减少同步等待的耗时。
 // HashLfuCache 的实现类似HashLruCache
 template<typename Key, typename Value>
-void HashLfuCache
+class HashLfuCache
 {
 public:
     HashLfuCache(size_t capacity, int sliceNum, int maxAverageNum = 10)
@@ -414,5 +414,5 @@ private:
     size_t capacity_;   // 缓存的总容量
     int sliceNum_;      // 缓存分片数量
     std::vector<std::unique_ptr<LfuCache<Key, Value>>> lfuSliceCaches_; // 缓存分片容器
-}
+};
 }

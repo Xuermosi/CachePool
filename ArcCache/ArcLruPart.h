@@ -13,7 +13,7 @@ class ArcLruPart
 public:
     using NodeType = ArcNode<Key, Value>;
     using NodePtr = std::shared_ptr<NodeType>;
-    using NodeMap = std::unordered_map<Key, Value>;
+    using NodeMap = std::unordered_map<Key, NodePtr>;
 
     // 构造函数 初始化缓存容量和转换阈值，并初始化链表
     explicit ArcLruPart(size_t capacity, size_t transformThreshold)
@@ -30,22 +30,30 @@ public:
     {
         if (capacity_ == 0) return false;
 
-        // 使用互斥锁保护对缓存的并发放稳
-        std::lock_guard<mutex> lock<mutex_>;
+        // 使用互斥锁保护对缓存的并发访问
+        std::lock_guard<std::mutex> lock(mutex_);
         // 在主缓存中查找键
         auto it = mainCache_.find(key);
         // 存在
         if (it != mainCache_.end())
         {
-            // 如果键存在，则更新节点的访问次数并移动到链表头部
+            return updateExistingNode(it->second, value);
+        }
+        return addNewNode(key, value);
+    }
+
+    bool get(Key key, Value& value, bool& shouldTransform)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = mainCache_.find(key);
+        if (it != mainCache_.end())
+        {
             shouldTransform = updateNodeAccess(it->second);
-            // 获取节点的值
             value = it->second->getValue();
             return true;
         }
         return false;
     }
-
     // 检查幽灵缓存中是否存在键
     bool checkGhost (Key key)
     {
@@ -101,7 +109,7 @@ private:
     // 添加新节点到主缓存
     bool addNewNode(const Key& key, const Value& value)
     {
-        if (mainCache_size() >= capacity_)
+        if (mainCache_.size() >= capacity_)
         {
             // 主缓存满了 驱逐最近最少使用节点
             evictLeastRecent();
@@ -155,7 +163,7 @@ private:
         removeFromMain(leastRecent);
 
         // 添加到幽灵缓存
-        if (ghostCache_size() >= ghostCapacity_) // 判断幽灵缓存是否已满
+        if (ghostCache_.size() >= ghostCapacity_) // 判断幽灵缓存是否已满
         {
             removeOldestGhost(); // 移除最近最少使用节点
         }

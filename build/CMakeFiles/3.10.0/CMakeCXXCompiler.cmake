@@ -1,7 +1,7 @@
-set(CMAKE_CXX_COMPILER "/usr/local/bin/g++")
+set(CMAKE_CXX_COMPILER "/opt/rh/devtoolset-11/root/usr/bin/c++")
 set(CMAKE_CXX_COMPILER_ARG1 "")
 set(CMAKE_CXX_COMPILER_ID "GNU")
-set(CMAKE_CXX_COMPILER_VERSION "11.4.0")
+set(CMAKE_CXX_COMPILER_VERSION "11.2.1")
 set(CMAKE_CXX_COMPILER_VERSION_INTERNAL "")
 set(CMAKE_CXX_COMPILER_WRAPPER "")
 set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT "17")
@@ -18,9 +18,9 @@ set(CMAKE_CXX_SIMULATE_VERSION "")
 
 
 set(CMAKE_AR "/opt/rh/devtoolset-11/root/usr/bin/ar")
-set(CMAKE_CXX_COMPILER_AR "/usr/local/bin/gcc-ar")
+set(CMAKE_CXX_COMPILER_AR "/opt/rh/devtoolset-11/root/usr/bin/gcc-ar")
 set(CMAKE_RANLIB "/opt/rh/devtoolset-11/root/usr/bin/ranlib")
-set(CMAKE_CXX_COMPILER_RANLIB "/usr/local/bin/gcc-ranlib")
+set(CMAKE_CXX_COMPILER_RANLIB "/opt/rh/devtoolset-11/root/usr/bin/gcc-ranlib")
 set(CMAKE_LINKER "/opt/rh/devtoolset-11/root/usr/bin/ld")
 set(CMAKE_COMPILER_IS_GNUCXX 1)
 set(CMAKE_CXX_COMPILER_LOADED 1)
@@ -71,5 +71,5 @@ endif()
 
 
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "stdc++;m;gcc_s;gcc;c;gcc_s;gcc")
-set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/usr/local/lib/gcc/x86_64-pc-linux-gnu/11.4.0;/usr/local/lib64;/lib64;/usr/lib64;/usr/local/lib")
+set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/opt/rh/devtoolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11;/opt/rh/devtoolset-11/root/usr/lib64;/lib64;/usr/lib64;/opt/rh/devtoolset-11/root/usr/lib")
 set(CMAKE_CXX_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")

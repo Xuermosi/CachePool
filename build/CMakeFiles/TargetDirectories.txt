@@ -1,0 +1,3 @@
+/data/jazh/CachePool/build/CMakeFiles/rebuild_cache.dir
+/data/jazh/CachePool/build/CMakeFiles/edit_cache.dir
+/data/jazh/CachePool/build/CMakeFiles/main.dir

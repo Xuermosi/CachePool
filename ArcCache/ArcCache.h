@@ -19,7 +19,7 @@ public:
     {}
 
     // 析构函数，使用默认实现
-    ~ArcCache() voerride = default;
+    ~ArcCache() override = default;
 
     // 向缓存中插入键值对
     void put(Key key, Value value) override

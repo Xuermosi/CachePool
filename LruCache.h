@@ -38,9 +38,10 @@ public:
     Key getKey() const {return key_; }
     Value getValue() const {return value_; }
     void setValue(const Value& value) {value_ = value; }
-    size_t getAccessCount() {++accessCount_; }
+    size_t getAccessCount() const{ return accessCount_; }
+    void incrementAccessCount() { ++accessCount_; }
 
-    friend class LruCache<Key Value>;
+    friend class LruCache<Key, Value>;
 };
 
 // 让LruCache继承自ICachePolicy接口  重写里面两个get和一个put方法
@@ -50,8 +51,8 @@ class LruCache : public ICachePolicy<Key, Value>
 public:
     // 定义类型别名
     using LruNodeType = LruNode<Key, Value>;
-    using LruNodePtr = std::shared_ptr<LruNodeType>;  // 使用智能指针
-    using LruNodeMap = std::unordered_map<Key, LruNodePtr>;
+    using NodePtr = std::shared_ptr<LruNodeType>;  // 使用智能指针
+    using NodeMap = std::unordered_map<Key, NodePtr>;
 
     // 根据容量参数构造
     LruCache(int capacity)
@@ -113,7 +114,7 @@ public:
     // 删除指定元素
     void remove(Key key)
     {
-        std::lock_guard<std::mutex> lock<mutex_>;
+        std::lock_guard<std::mutex> lock(mutex_);
         auto it = nodeMap_.find(key);
         if (it != nodeMap_.end())
         {
@@ -137,18 +138,21 @@ private:
     // 尝试命中节点
     void updateExistingNode(NodePtr node, const Value& value)
     {
-        // 确定当前哈希表是否已经超过链表容量
-        if (nodeMap_.size() >= capacity_)
-        {
-            // 超过的话就将最近最少使用的页面调出内存
-            evictLeastRecent();
-        }
-        // 没超过就把节点加入
-        NodePtr newNode = std::make_shared<LruNodeType>(key, value);
-        insertNode(newNode);
-        nodeMap_[key] = newNode;
+       node->setValue(value);
+       moveToMostRecent(node);
     }
 
+    void addNewNode(const Key& key, const Value& value) 
+    {
+       if (nodeMap_.size() >= capacity_) 
+       {
+           evictLeastRecent();
+       }
+
+       NodePtr newNode = std::make_shared<LruNodeType>(key, value);
+       insertNode(newNode);
+       nodeMap_[key] = newNode;
+    }
     // 将该节点移动到最新位置
     // 最新使用的节点要置于尾部
     void moveToMostRecent(NodePtr node)
@@ -201,10 +205,10 @@ private:
 
 // LRU优化：Lru-k版本。 通过继承的方式进行再优化
 template<typename Key, typename Value>
-class LruCache : public LruCache<Key, Value>
+class LruKCache : public LruCache<Key, Value>
 {
 public:
-    LruCache(int capacity, int historyCapacity, int k)
+    LruKCache(int capacity, int historyCapacity, int k)
         : LruCache<Key, Value>(capacity)  // 调用基类构造
         , historyList_(std::make_unique<LruCache<Key, size_t>>)
         , k_(k)
@@ -262,7 +266,7 @@ template<typename Key, typename Value>
 class HashLruCaches
 {
 public:
-    HashCaches(size_t capacity, int sliceNum)
+    HashLruCaches(size_t capacity, int sliceNum)
         : capacity_(capacity)
           // 若传入值为0，则初始化为当前系统的硬件并发线程数，通过hardware_concurrecy获取
         , sliceNum_(sliceNum > 0? sliceNum : std::thread::hardware_concurrency())
@@ -289,11 +293,11 @@ public:
     bool get(Key key, Value& value)
     {
         // 获取key的hash值，并计算出对应的分片索引
-        size_t sliceIndex = Hash(Key) % sliceNum_;
+        size_t sliceIndex = Hash(key) % sliceNum_;
         return lruSliceCaches_[sliceIndex]->get(key, value);
     }
 
-    Value get(Key key, Value& value)
+    Value get(Key key)
     {
         Value value;
         // 将 value 对象的内存内容置为0
@@ -308,7 +312,7 @@ public:
 
 private:
     // 将key转换为对应的hash值
-    size_t(Key key)
+    size_t Hash(Key key)
     {
         std::hash<Key> hashFunc;
         return hashFunc(key);
@@ -321,4 +325,5 @@ private:
     // 因此这里两个类是组合关系，HashCaches依赖于LruCache
     std::vector<std::unique_ptr<LruCache<Key, Value>>> lruSliceCaches_; // 切片lru缓存
 };
+
 }  // namespace JazhCache
